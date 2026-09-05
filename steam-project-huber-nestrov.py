@@ -461,6 +461,13 @@ results["Error huber"] = np.where(
     delta * error_raw.abs() - 0.5 * delta**2,
 )
 
+diferencia = results["Resultado"] - results["Esperado"]
+n = len(diferencia)
+
+sd = np.sqrt(np.sum((diferencia - diferencia.mean()) ** 2) / (n - 1))
+se = sd / np.sqrt(n)
+t = diferencia.mean() / se
+
 print(f"Max error MSE: {results["Error MSE"].max()}")
 print(f"Mean error MSE: {results["Error MSE"].mean()}")
 print(f"Mediana error MSE: {results["Error MSE"].median()}")
@@ -469,6 +476,9 @@ print(f"\nMax error Huber: {results["Error huber"].max()}")
 print(f"Mean error Huber: {results["Error huber"].mean()}")
 print(f"Mediana error Huber: {results["Error huber"].median()}")
 print(f"Min error Huber: {results["Error huber"].min()}")
+
+print(f"\nDesviación estandar: {sd}")
+print(f"T-Student: {t}")
 
 # %%
 import os
@@ -488,19 +498,10 @@ def capturar_datos_juego():
     print("=== CAPTURA DE DATOS DEL JUEGO DE STEAM ===")
 
     price_eur = float(input("Precio en EUR (ej. 19.99): "))
-    # review_score = float(
-    #     input("Review score o Calificación (ej. 8 o 8.5): ")
-    # )
     positive = int(input("Cantidad de reseñas positivas (ej. 15000): "))
     negative = int(input("Cantidad de reseñas negativas (ej. 1200): "))
-    total = int(
-        input("Cantidad total de reseñas (ej. 16200): ")
-        if positive is None
-        else positive + negative
-    )
-    concurrent_users = int(
-        input("Usuarios concurrentes ayer (ej. 4500): ")
-    )
+    total = positive + negative  # Cálculo directo del total
+    concurrent_users = int(input("Usuarios concurrentes ayer (ej. 4500): "))
 
     rangos_owners = [
         "0 .. 20,000",
@@ -516,6 +517,8 @@ def capturar_datos_juego():
         "20,000,000 .. 50,000,000",
         "50,000,000 .. 100,000,000",
     ]
+
+    # Corregida la coma faltante en 'Very Negative'
     grade = [
         "Overwhelmingly Positive",
         "Very Positive",
@@ -523,8 +526,8 @@ def capturar_datos_juego():
         "Positive",
         "Mixed",
         "Negative",
-        "Mostly Negative",	
-        "Very Negative"
+        "Mostly Negative",
+        "Very Negative",
         "Overwhelmingly Negative",
         "No user reviews",
     ]
@@ -533,51 +536,49 @@ def capturar_datos_juego():
     for i, rango in enumerate(rangos_owners, 1):
         print(f"[{i}] {rango}")
 
-    # Validación de selección única
     while True:
         try:
-            opcion = int(
-                input(f"Elige una opción (1-{len(rangos_owners)}): ")
-            )
+            opcion = int(input(f"Elige una opción (1-{len(rangos_owners)}): "))
             if 1 <= opcion <= len(rangos_owners):
-                owners_range_selected = rangos_owners[opcion - 1]
+                owners_selected_idx = opcion - 1
                 break
             else:
                 print("Opción fuera de rango. Intenta de nuevo.")
         except ValueError:
             print("Por favor, ingresa solo un número entero.")
-            
+
     print("\n--- Selecciona la calificación de acuerdo a reseñas ---")
     for i, rango in enumerate(grade, 1):
         print(f"[{i}] {rango}")
 
-    # Validación de selección única
     while True:
         try:
-            opcion = int(
-                input(f"Elige una opción (1-{len(grade)}): ")
-            )
+            opcion = int(input(f"Elige una opción (1-{len(grade)}): "))
             if 1 <= opcion <= len(grade):
-                grade_selection = grade[opcion - 1]
+                grade_selected_idx = opcion - 1
                 break
             else:
                 print("Opción fuera de rango. Intenta de nuevo.")
         except ValueError:
             print("Por favor, ingresa solo un número entero.")
 
-    # Guardar en un diccionario / DataFrame
     datos_capturados = {
         "price_eur": price_eur,
-        # "review_score": review_score,
         "positive": positive,
         "negative": negative,
         "total": total,
         "concurrent_users_yesterday": concurrent_users,
-        "owners_range": owners_range_selected,
-        "grade": grade_selection,
     }
 
-    print("\n¡Datos capturados exitosamente!")
+    for idx, rango in enumerate(rangos_owners):
+        column_name = rango
+        datos_capturados[column_name] = 1 if idx == owners_selected_idx else 0
+
+    for idx, g in enumerate(grade):
+        column_name = g
+        datos_capturados[column_name] = 1 if idx == grade_selected_idx else 0
+
+    print("\n¡Datos capturados y procesados exitosamente!")
     return pd.DataFrame([datos_capturados])
 
 with open("params-original.json", 'r') as file:
