@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import json
 import matplotlib.pyplot as plt
+import math
 
 # %% [markdown]
 # ## Limpieza excel para no afectar formato devido a objetos json
@@ -36,8 +37,6 @@ df_games = pd.read_csv("./steam-dataset/games_fixed_clean.csv", encoding="ISO-88
 # %%
 def see_nan_values(df):
 	nan_values = df.isnull().sum()
-
-# %%
 
 # %% [markdown]
 # Ya que la cantidad de valores vaciós en precio es considerable y un dato que quiero analizar decidí tumbar las instancias que no contaban con este valor.
@@ -74,7 +73,6 @@ df_games.drop(columns=["price_overview", "languages", "type"], inplace=True)
 # ## Análisis genérica de la información
 
 # %%
-# df_games['currency'].hist()
 unique_curr = df_games['currency'].value_counts()
 
 
@@ -90,10 +88,7 @@ unique_curr = df_games['currency'].value_counts()
 from currency_converter import CurrencyConverter
 c = CurrencyConverter('./eurofxref-hist.csv')
 
-# %%
-# df_games.info()
 
-# %%
 # Missing rates
 df_games = df_games.replace('SAR', 'ZAR')
 
@@ -111,28 +106,15 @@ rates['TWD'] = 0.027
 rates['AED'] = 0.23
 rates['VND'] = 0.000033
 df_games['prices_eur'] = df_games['price'] * df_games['currency'].map(rates)
-# see_nan_values(df_games)
 
-# %% [markdown]
-# # DF Games está limpio y listo, leer los siguientes archivos y unión de la información
-
-# %%
 import seaborn as sns
 
-# print(len(df_games))
-# df_games.info()
 df_games.drop(columns=["price", "currency", 'is_free'])
 
-# print(df_games['prices_eur'].head())
-# print("Cantidad de juegos con la categoría gratis", df_games['is_free'].value_counts())
-# print('Min', df_games['prices_eur'].min())
-# print('Max', df_games['prices_eur'].max())
-# print('Quantil 0.99: ', df_games["prices_eur"].quantile(0.99))
-
-# df_games[df_games["prices_eur"] < df_games["prices_eur"].quantile(0.99)]['prices_eur'].hist()
+df_games[df_games["prices_eur"] < df_games["prices_eur"].quantile(0.99)]['prices_eur'].hist()
 
 
-# %%
+
 def one_hot_encoding(df, column): 
 	# https://www.geeksforgeeks.org/machine-learning/one-hot-encoding-from-a-pandas-column-containing-a-list/
 	for category in df[column].unique():
@@ -148,54 +130,29 @@ df_reviews = pd.read_csv("./steam-dataset/reviews.csv", na_values="\\N")
 df_insights = pd.read_csv("./steam-dataset/steamspy_insights.csv", encoding="ISO-8859-1", na_values="\\N")
 df_tags = pd.read_csv("./steam-dataset/tags.csv", na_values="\\N")
 
-# %%
-# See if there is information missing
-# print("categories:")
-# see_nan_values(df_categories) # Clean
-# print(df_categories.value_counts())
-# print(len(df_categories["category"].unique()))
-
-
-# %%
-# print("genres:")
-# see_nan_values(df_genres) # Clean
 df_genres["genre"].value_counts()
 
-# %%
-# print("reviews:")
 df_reviews.dropna(thresh=1)
-# see_nan_values(df_reviews)
+
 df_reviews_important = df_reviews.drop(['metacritic_score', 'reviews', 'recommendations', 'steamspy_user_score', 'steamspy_score_rank', 'steamspy_positive', 'steamspy_negative'], axis=1)
-# print(df_reviews_important.columns)
 df_reviews_important
 
 # %%
-# df_reviews_important.info()
-# see_nan_values(df_reviews_important)
-# print(df_reviews_important['review_score_description'].value_counts())
+df_reviews_important.info()
+
 categories = df_reviews_important['review_score_description'].unique()
-# print("Categorías: ", categories)
+
 df_reviews_important.dropna(subset=['review_score_description'], inplace=True)
 categories = df_reviews_important['review_score_description'].unique()
-# print(categories)
 
 # %%
-# print("insights:")
-# see_nan_values(df_insights)
-# print('playtime_average_forever: ', df_insights['playtime_average_forever'].value_counts())
-# print('playtime_average_2weeks: ', df_insights['playtime_average_2weeks'].value_counts())
-# print('playtime_median_forever: ', df_insights['playtime_median_forever'].value_counts())
-# print('playtime_median_2weeks: ', df_insights['playtime_median_2weeks'].value_counts())
 
 # Tumbar columnas que no aportan información relevante
 df_insights_clean = df_insights.drop(['developer', 'publisher', 'price', 'initial_price', 'discount', 'languages', 'genres', 'playtime_average_forever', 'playtime_average_2weeks', 'playtime_median_forever', 'playtime_median_2weeks'], axis=1)
 df_insights_clean
 
 # %%
-# print("tags:")
-# see_nan_values(df_tags)
 df_tags_count = df_tags["tag"].value_counts()
-# print("Cantidad de tags repetidos: ", len(df_tags_count[df_tags_count > 1]))
 
 # %%
 df_games = df_games.drop(["price", "currency", "is_free"], axis=1)
@@ -208,26 +165,13 @@ games = games.merge(df_insights_clean.set_index("app_id"), on="app_id", how="inn
 # games = games.merge(df_tags.set_index("app_id"), on="app_id", how="inner")
 games
 
-# %%
-# plt.figure(figsize=(14, 6))
-# sns.scatterplot(x=games['positive'], y=games['negative'], hue=games['owners_range'], style=games['review_score_description'])
-
-# plt.legend(
-# 	bbox_to_anchor=(1.05, 1),
-# 	loc='upper left'
-# )
-
-# plt.tight_layout()
-# plt.show()
 
 # %%
 games_one_hot = one_hot_encoding(games, 'owners_range')
 games_one_hot = one_hot_encoding(games_one_hot, 'review_score_description')
-print(games_one_hot.columns[3:])
-# plt.figure(figsize=(18, 9))
 games_one_hot[games_one_hot.columns[3:]]
 correlation = games_one_hot[games_one_hot.columns[3:]].corr()
-# sns.heatmap(correlation)
+
 
 # %%
 def standardize_data(df):
@@ -252,11 +196,9 @@ games_final = games_one_hot.drop(columns=['app_id', 'name', 'release_date'])
 
 games_final = games_final.sample(frac=1)
 
-# display(games_final)
 
 df_x = games_final.iloc[:, [0, *range(2, len(games_final.columns))]]
 df_y = games_final.iloc[:, 1]
-# display(df_y)
 
 train_length = round(len(df_x) * .8)
 df_x_train = df_x[:train_length]
@@ -272,7 +214,6 @@ df_x_train
 df_x_test_standar = (df_x_test.iloc[:, :5] - mean) / std
 df_x_test = pd.concat([df_x_test_standar, df_x_test.iloc[:, 5:]], axis=1)
 
-# see_nan_values(df_x_train)
 
 # %%
 # GET PCA to see tendencies 
@@ -283,23 +224,14 @@ eigen_values, eigen_vectors = np.linalg.eig(covariance_matrix)
 # Calculating the explained variance on each of components
 variance_explained = eigen_values / eigen_values.sum() * 100
 
-# Identifying components that explain the relationship between the data
-# print("Varianza: ", variance_explained)
-# print("Verificar varianza: ", variance_explained.sum())
-
-cumulative_variance_explained = np.cumsum(variance_explained)
-# print("Cumulative variance", cumulative_variance_explained)
-
 projection_matrix = (eigen_vectors.T).T
 projection_matrix
 
 # Total -> 85.8% (PC_x = 78.07 + 7.78)
 df_pca = df_x.dot(projection_matrix)
-# print(f"PC_X: {cumulative_variance_explained[0].real:.2f}% | PC_Y: {(cumulative_variance_explained[1].real - cumulative_variance_explained[0].real):.2f}%")
 
 # %%
 components = pd.DataFrame(df_pca)
-# components.head()
 
 sns.scatterplot(x = components[0], y = components[1])
 
@@ -328,11 +260,24 @@ def h(params, x_values, b):
 def calculate_loss(errors):
 	return (errors ** 2).mean()
 
+# %%
+def huber_loss(y_pred, y, delta = 1.5):
+  error = y - y_pred
+  abs_error = np.abs(error)
+    
+    # Condición elemento a elemento:
+    # Si abs(error) <= delta usa la pérdida cuadrática, si no, usa la lineal.
+  return np.where(
+		abs_error <= delta,
+		0.5 * (error ** 2),
+		delta * (abs_error - 0.5 * delta)
+	).mean()
+
 # %% [markdown]
 # $$ \sum_{i=1}^n \left( h(x_i) - y_i  \right) x_{ij} $$
 
 # %%
-def sum(params, x_values, b, y):
+def sum(params, x_values, b, y, delta=1.5):
 	"""sum
 
 	Args:
@@ -344,16 +289,23 @@ def sum(params, x_values, b, y):
 		float: error total
 	"""
 	# Calcular error interno
-	errors = h(params, x_values, b) - y
+	y_pred = h(params, x_values, b)
+	errors = y_pred - y
 
-	mean_error = calculate_loss(errors)
+	mean_error = huber_loss(y_pred, y)
+
+	huber_gradient = np.where(
+		np.abs(errors) <= delta,
+		errors,
+		delta * np.sign(errors)
+	)
 
 	# Calcular error acumulado
 	theta_error = np.zeros(len(params) + 1)
-	theta_error[:-1] = np.dot(errors, x_values)
+	theta_error[:-1] = np.dot(huber_gradient, x_values)
 	
 	# Suma parámetro b
-	theta_error[-1] = errors.sum()
+	theta_error[-1] = huber_gradient.sum()
 
 	return theta_error, mean_error
 
@@ -361,7 +313,7 @@ def sum(params, x_values, b, y):
 # $$ \theta_j = \theta_j - \frac{\alpha}{m} \sum_{i=1}^n \left( h(x_i) - y_i  \right) x_{ij} $$
 
 # %%
-def GD(params, alfa, b, x_values, y):
+def GD(params, alfa, b, x_values, y, change, momentum = 0.9):
 	"""GD
 
 	Args:
@@ -376,12 +328,17 @@ def GD(params, alfa, b, x_values, y):
 	"""
 	# theta_length = len(params);
 	m = 1 / len(x_values)
+	
+	future_params = params + momentum * change[:-1]
+	future_b = b + momentum * change[-1]
 
-	error_evaluation, mean_error = sum(params, x_values, b, y)
-	new_params = params - alfa * m * error_evaluation[:-1]
-	b = b - alfa * m * error_evaluation[-1]
+	error_evaluation, mean_error = sum(future_params, x_values, future_b, y)
+	
+	change = (momentum * change) - alfa * m * error_evaluation
+	new_params = params + change[:-1]
+	b = b + change[-1]
 
-	return new_params, b, mean_error
+	return new_params, b, change, mean_error
 
 # %%
 def train(df_x, df_y, df_x_test, df_y_test):
@@ -396,6 +353,10 @@ def train(df_x, df_y, df_x_test, df_y_test):
 	alfa = 0.4
 	params = np.random.rand(len(df_x.columns)) * 100
 	b = 0.5
+	
+	change = np.zeros(len(params)+1)
+	momentum = 0.9
+	
 	errors = []
 	test_errors = []
 	
@@ -403,12 +364,13 @@ def train(df_x, df_y, df_x_test, df_y_test):
 		oldparams = params.copy()
 		# print("Params: ", params)
   
-		params, b, mean_error = GD(params, alfa, b, df_x, df_y)	
+		params, b, change, mean_error = GD(params, alfa, b, df_x, df_y, change, momentum)	
 		errors.append(mean_error)
 
 		# plt.plot(errors)
 		test_predictions = h(params, df_x_test, b)
-		test_loss = calculate_loss(test_predictions - df_y_test)
+		# test_loss = calculate_loss(test_predictions - df_y_test)
+		test_loss = huber_loss(test_predictions, df_y_test)
 		test_errors.append(test_loss)
 	
 		if epochs % 100 == 0:
@@ -423,7 +385,7 @@ def train(df_x, df_y, df_x_test, df_y_test):
 			print(params)
 			break
   
-		if np.allclose(oldparams, params, atol=1e-3):
+		if np.allclose(oldparams, params, atol=1e-6):
 			print("Reached minimum")
 			print("Epoch: ", epochs)
 			print ("final params:")
@@ -451,37 +413,76 @@ plt.grid()
 plt.show()
 
 # %%
+plt.figure(figsize=(10, 6))
+
+plt.plot(errors, label="Train Loss")
+plt.plot(test_errors, label="Test Loss")
+
+plt.yscale("log")
+plt.ylim(1e-2, 1e5)
+
+plt.xlabel("Epoch")
+plt.ylabel("MSE")
+plt.title("Training vs Test Loss")
+
+plt.legend()
+plt.grid()
+
+plt.show()
+
+# %%
 df_x_train.columns
 
 # %%
 print(params, b)
-# display(df_x_test)
-# display(df_y_test)
 
-# %%
 train_predictions = h(params, df_x_train, b)
 test_predictions = h(params, df_x_test, b)
 
-train_loss = calculate_loss(train_predictions - df_y_train)
-test_loss = calculate_loss(test_predictions - df_y_test)
-
-print("Train loss:", train_loss)
-print("Test loss:", test_loss)
+print("Train loss MSE:", calculate_loss(train_predictions - df_y_train))
+print("Test loss MSE:", calculate_loss(test_predictions - df_y_test))
+print("\nTrain loss Huber:", huber_loss(train_predictions, df_y_train))
+print("Test loss Huber:", huber_loss(test_predictions, df_y_test))
 
 # %%
 print(f"Tamaño test x: {len(df_x_test)}")
 print(f"Tamaño test y: {len(df_y_test)}")
+
+delta = 1.5
+
 results = pd.DataFrame(data = np.dot(df_x_test, params) + b, columns=["Resultado"])
 results["Esperado"] = df_y_test.reset_index(drop=True)
-results["Error"] = (results["Resultado"] - results["Esperado"]) ** 2
-# display(results)
 
-print(f"Max error: {results["Error"].max()}")
-print(f"Mean error: {results["Error"].mean()}")
-print(f"Mediana error: {results["Error"].median()}")
-print(f"Min error: {results["Error"].min()}")
+error_raw = results["Resultado"] - results["Esperado"]
+results["Error MSE"] = error_raw**2
+results["Error huber"] = np.where(
+    error_raw.abs() <= delta,
+    0.5 * (error_raw**2),
+    delta * error_raw.abs() - 0.5 * delta**2,
+)
 
-sns.scatterplot(data=results, x="Esperado", y="Error")
+print(f"Max error MSE: {results["Error MSE"].max()}")
+print(f"Mean error MSE: {results["Error MSE"].mean()}")
+print(f"Mediana error MSE: {results["Error MSE"].median()}")
+print(f"Min error MSE: {results["Error MSE"].min()}")
+print(f"\nMax error Huber: {results["Error huber"].max()}")
+print(f"Mean error Huber: {results["Error huber"].mean()}")
+print(f"Mediana error Huber: {results["Error huber"].median()}")
+print(f"Min error Huber: {results["Error huber"].min()}")
+
+# %%
+import os
+import json
+
+data_to_save = {
+    "params": params.tolist(),  # Convierte el np.array a lista
+    "b": float(
+        b
+    ),  # Asegura que sea un float estándar (por si b es un escalar de numpy)
+}
+
+with open("params_optimized.json", "w") as f:
+  json.dump(data_to_save, f)
 
 def capturar_datos_juego():
     print("=== CAPTURA DE DATOS DEL JUEGO DE STEAM ===")
@@ -585,3 +586,4 @@ with open("params-original.json", 'r') as file:
   prediction = h(params, entradas[:-1], entradas[-1])
   
   print("Valor predecido: ", prediction)
+
