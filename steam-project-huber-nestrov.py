@@ -376,7 +376,7 @@ def train(df_x, df_y, df_x_test, df_y_test):
 		if epochs % 100 == 0:
 			print(f"Epoch {epochs}")
 			print("Error: ", mean_error)
-   
+     
   
 		epochs = epochs + 1	
 		if epochs == max_epochs:
@@ -584,7 +584,7 @@ def capturar_datos_juego():
 with open("params-original.json", 'r') as file:
   params = json.load(file)
   entradas = capturar_datos_juego()
-  prediction = h(params, entradas[:-1], entradas[-1])
+  prediction = h(params["params"], entradas[:-1], params["b"])
   
   print("Valor predecido: ", prediction)
 

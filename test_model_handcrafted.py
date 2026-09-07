@@ -111,9 +111,10 @@ def capturar_datos_juego():
     print("\n¡Datos capturados exitosamente!")
     return pd.DataFrame([datos_capturados])
 
-with open("params-original.json", 'r') as file:
+with open("params-10_000.json", 'r') as file:
   params = json.load(file)
   entradas = capturar_datos_juego()
-  prediction = h(params, entradas[:-1], entradas[-1])
+  print(entradas)
+  prediction = h(params[:-1], entradas, params[-1])
   
   print("Valor predecido: ", prediction)

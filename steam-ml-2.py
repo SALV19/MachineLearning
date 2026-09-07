@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import json
 import matplotlib.pyplot as plt
+import math
 
 # %% [markdown]
 # ## Limpieza excel para no afectar formato devido a objetos json
@@ -29,15 +30,21 @@ def clean_parse_file():
 
 # %%
 df_games = pd.read_csv("./steam-dataset/games_fixed_clean.csv", encoding="ISO-8859-1", na_values="\\N")
+print(df_games.head())
 
 # %% [markdown]
 # ## Función auxiliar para detectar la calidad del dataset y columnas con una cantidad considerable de datos faltantes
 
 # %%
 def see_nan_values(df):
+	# df.info()
 	nan_values = df.isnull().sum()
+	# print(nan_values / len(df) * 100)
+
+	# print(f"Lenght of dataset: {len(df)}")
 
 # %%
+see_nan_values(df_games)
 
 # %% [markdown]
 # Ya que la cantidad de valores vaciós en precio es considerable y un dato que quiero analizar decidí tumbar las instancias que no contaban con este valor.
@@ -48,6 +55,9 @@ df_games.dropna(subset=["price_overview"], inplace=True)
 
 # %%
 nan_values = df_games.isnull().sum()
+# print(nan_values / len(df_games) * 100)
+
+# print(f"Lenght of dataset: {len(df_games)}")
 
 # %% [markdown]
 # Debido a que el precio viene en una columna en formato JSON tuve que utilizar regex para extraer el precio y moneda de las instancias para poder analizarlo correctamente. De esta manera extraje el precio en dos columnas con las que puedo trabajar y analizar.
@@ -69,13 +79,15 @@ df_games
 
 # %%
 df_games.drop(columns=["price_overview", "languages", "type"], inplace=True)
+see_nan_values(df_games)
 
 # %% [markdown]
 # ## Análisis genérica de la información
 
 # %%
-# df_games['currency'].hist()
+df_games['currency'].hist()
 unique_curr = df_games['currency'].value_counts()
+print(unique_curr)
 
 
 # %% [markdown]
@@ -91,7 +103,7 @@ from currency_converter import CurrencyConverter
 c = CurrencyConverter('./eurofxref-hist.csv')
 
 # %%
-# df_games.info()
+df_games.info()
 
 # %%
 # Missing rates
@@ -111,7 +123,7 @@ rates['TWD'] = 0.027
 rates['AED'] = 0.23
 rates['VND'] = 0.000033
 df_games['prices_eur'] = df_games['price'] * df_games['currency'].map(rates)
-# see_nan_values(df_games)
+see_nan_values(df_games)
 
 # %% [markdown]
 # # DF Games está limpio y listo, leer los siguientes archivos y unión de la información
@@ -119,17 +131,17 @@ df_games['prices_eur'] = df_games['price'] * df_games['currency'].map(rates)
 # %%
 import seaborn as sns
 
-# print(len(df_games))
-# df_games.info()
+print(len(df_games))
+df_games.info()
 df_games.drop(columns=["price", "currency", 'is_free'])
 
-# print(df_games['prices_eur'].head())
-# print("Cantidad de juegos con la categoría gratis", df_games['is_free'].value_counts())
-# print('Min', df_games['prices_eur'].min())
-# print('Max', df_games['prices_eur'].max())
-# print('Quantil 0.99: ', df_games["prices_eur"].quantile(0.99))
+print(df_games['prices_eur'].head())
+print("Cantidad de juegos con la categoría gratis", df_games['is_free'].value_counts())
+print('Min', df_games['prices_eur'].min())
+print('Max', df_games['prices_eur'].max())
+print('Quantil 0.99: ', df_games["prices_eur"].quantile(0.99))
 
-# df_games[df_games["prices_eur"] < df_games["prices_eur"].quantile(0.99)]['prices_eur'].hist()
+df_games[df_games["prices_eur"] < df_games["prices_eur"].quantile(0.99)]['prices_eur'].hist()
 
 
 # %%
@@ -138,7 +150,7 @@ def one_hot_encoding(df, column):
 	for category in df[column].unique():
 		df[category] = df[column].apply(lambda x: 1 if category in x else 0)
 
-	# Drop the original column
+  # Drop the original column
 	return df.drop(column, axis=1)
 
 # %%
@@ -149,53 +161,45 @@ df_insights = pd.read_csv("./steam-dataset/steamspy_insights.csv", encoding="ISO
 df_tags = pd.read_csv("./steam-dataset/tags.csv", na_values="\\N")
 
 # %%
-# See if there is information missing
-# print("categories:")
-# see_nan_values(df_categories) # Clean
-# print(df_categories.value_counts())
-# print(len(df_categories["category"].unique()))
-
-
-# %%
-# print("genres:")
-# see_nan_values(df_genres) # Clean
+print("genres:")
+see_nan_values(df_genres) # Clean
 df_genres["genre"].value_counts()
 
 # %%
-# print("reviews:")
+print("reviews:")
 df_reviews.dropna(thresh=1)
-# see_nan_values(df_reviews)
+see_nan_values(df_reviews)
 df_reviews_important = df_reviews.drop(['metacritic_score', 'reviews', 'recommendations', 'steamspy_user_score', 'steamspy_score_rank', 'steamspy_positive', 'steamspy_negative'], axis=1)
-# print(df_reviews_important.columns)
+print(df_reviews_important.columns)
 df_reviews_important
 
 # %%
-# df_reviews_important.info()
-# see_nan_values(df_reviews_important)
-# print(df_reviews_important['review_score_description'].value_counts())
+df_reviews_important.info()
+see_nan_values(df_reviews_important)
+print(df_reviews_important['review_score_description'].value_counts())
 categories = df_reviews_important['review_score_description'].unique()
-# print("Categorías: ", categories)
+print("Categorías: ", categories)
 df_reviews_important.dropna(subset=['review_score_description'], inplace=True)
 categories = df_reviews_important['review_score_description'].unique()
-# print(categories)
+print(categories)
 
 # %%
-# print("insights:")
-# see_nan_values(df_insights)
-# print('playtime_average_forever: ', df_insights['playtime_average_forever'].value_counts())
-# print('playtime_average_2weeks: ', df_insights['playtime_average_2weeks'].value_counts())
-# print('playtime_median_forever: ', df_insights['playtime_median_forever'].value_counts())
-# print('playtime_median_2weeks: ', df_insights['playtime_median_2weeks'].value_counts())
+print("insights:")
+see_nan_values(df_insights)
+print('playtime_average_forever: ', df_insights['playtime_average_forever'].value_counts())
+print('playtime_average_2weeks: ', df_insights['playtime_average_2weeks'].value_counts())
+print('playtime_median_forever: ', df_insights['playtime_median_forever'].value_counts())
+print('playtime_median_2weeks: ', df_insights['playtime_median_2weeks'].value_counts())
 
 # Tumbar columnas que no aportan información relevante
 df_insights_clean = df_insights.drop(['developer', 'publisher', 'price', 'initial_price', 'discount', 'languages', 'genres', 'playtime_average_forever', 'playtime_average_2weeks', 'playtime_median_forever', 'playtime_median_2weeks'], axis=1)
 df_insights_clean
 
 # %%
-# print("tags:")
-# see_nan_values(df_tags)
+print("tags:")
+see_nan_values(df_tags)
 df_tags_count = df_tags["tag"].value_counts()
-# print("Cantidad de tags repetidos: ", len(df_tags_count[df_tags_count > 1]))
+print("Cantidad de tags repetidos: ", len(df_tags_count[df_tags_count > 1]))
 
 # %%
 df_games = df_games.drop(["price", "currency", "is_free"], axis=1)
@@ -209,25 +213,25 @@ games = games.merge(df_insights_clean.set_index("app_id"), on="app_id", how="inn
 games
 
 # %%
-# plt.figure(figsize=(14, 6))
-# sns.scatterplot(x=games['positive'], y=games['negative'], hue=games['owners_range'], style=games['review_score_description'])
+plt.figure(figsize=(14, 6))
+sns.scatterplot(x=games['positive'], y=games['negative'], hue=games['owners_range'], style=games['review_score_description'])
 
-# plt.legend(
-# 	bbox_to_anchor=(1.05, 1),
-# 	loc='upper left'
-# )
+plt.legend(
+	bbox_to_anchor=(1.05, 1),
+	loc='upper left'
+)
 
-# plt.tight_layout()
-# plt.show()
+plt.tight_layout()
+plt.show()
 
 # %%
 games_one_hot = one_hot_encoding(games, 'owners_range')
 games_one_hot = one_hot_encoding(games_one_hot, 'review_score_description')
 print(games_one_hot.columns[3:])
-# plt.figure(figsize=(18, 9))
+plt.figure(figsize=(18, 9))
 games_one_hot[games_one_hot.columns[3:]]
 correlation = games_one_hot[games_one_hot.columns[3:]].corr()
-# sns.heatmap(correlation)
+sns.heatmap(correlation)
 
 # %%
 def standardize_data(df):
@@ -252,27 +256,33 @@ games_final = games_one_hot.drop(columns=['app_id', 'name', 'release_date'])
 
 games_final = games_final.sample(frac=1)
 
-# display(games_final)
+# 
 
 df_x = games_final.iloc[:, [0, *range(2, len(games_final.columns))]]
 df_y = games_final.iloc[:, 1]
-# display(df_y)
+# 
 
-train_length = round(len(df_x) * .8)
+train_length = round(len(df_x) * .6)
+validation_length = round(train_length / 2) + train_length
 df_x_train = df_x[:train_length]
-df_x_test = df_x[train_length:]
+df_x_validation = df_x[train_length:validation_length]
+df_x_test = df_x[validation_length:]
+
 
 df_y_train = df_y[:train_length]
-df_y_test = df_y[train_length:]
+df_y_validation = df_y[train_length:validation_length]
+df_y_test = df_y[validation_length:]
 
 df_x_standar, mean, std = standardize_data(df_x_train.iloc[:, :5])
 df_x_train = pd.concat([df_x_standar.iloc[:, :], df_x_train.iloc[:, 5:]], axis=1)
-df_x_train
+
+df_x_validation_standar = (df_x_validation.iloc[:, :5] - mean) / std
+df_x_validation = pd.concat([df_x_validation_standar, df_x_validation.iloc[:, 5:]], axis=1)
 
 df_x_test_standar = (df_x_test.iloc[:, :5] - mean) / std
 df_x_test = pd.concat([df_x_test_standar, df_x_test.iloc[:, 5:]], axis=1)
 
-# see_nan_values(df_x_train)
+see_nan_values(df_x_train)
 
 # %%
 # GET PCA to see tendencies 
@@ -284,22 +294,18 @@ eigen_values, eigen_vectors = np.linalg.eig(covariance_matrix)
 variance_explained = eigen_values / eigen_values.sum() * 100
 
 # Identifying components that explain the relationship between the data
-# print("Varianza: ", variance_explained)
-# print("Verificar varianza: ", variance_explained.sum())
 
 cumulative_variance_explained = np.cumsum(variance_explained)
-# print("Cumulative variance", cumulative_variance_explained)
 
 projection_matrix = (eigen_vectors.T).T
 projection_matrix
 
 # Total -> 85.8% (PC_x = 78.07 + 7.78)
 df_pca = df_x.dot(projection_matrix)
-# print(f"PC_X: {cumulative_variance_explained[0].real:.2f}% | PC_Y: {(cumulative_variance_explained[1].real - cumulative_variance_explained[0].real):.2f}%")
 
 # %%
 components = pd.DataFrame(df_pca)
-# components.head()
+components.head()
 
 sns.scatterplot(x = components[0], y = components[1])
 
@@ -384,7 +390,7 @@ def GD(params, alfa, b, x_values, y):
 	return new_params, b, mean_error
 
 # %%
-def train(df_x, df_y, df_x_test, df_y_test):
+def train(df_x, df_y, df_x_validation, df_y_validation, df_x_test, df_y_test):
 	"""
 		Entrenamiento del modelo
 		Selecciona instancia
@@ -398,6 +404,7 @@ def train(df_x, df_y, df_x_test, df_y_test):
 	b = 0.5
 	errors = []
 	test_errors = []
+	validation_errors = []
 	
 	while True:
 		oldparams = params.copy()
@@ -407,6 +414,10 @@ def train(df_x, df_y, df_x_test, df_y_test):
 		errors.append(mean_error)
 
 		# plt.plot(errors)
+		validation_predictions = h(params, df_x_validation, b)
+		validation_loss = calculate_loss(validation_predictions - df_y_validation)
+		validation_errors.append(validation_loss)
+  
 		test_predictions = h(params, df_x_test, b)
 		test_loss = calculate_loss(test_predictions - df_y_test)
 		test_errors.append(test_loss)
@@ -429,14 +440,15 @@ def train(df_x, df_y, df_x_test, df_y_test):
 			print ("final params:")
 			print (params)
 			break
-	return params, b, errors, test_errors
+	return params, b, errors, test_errors, validation_errors
 
 # %%
-params, b, errors, test_errors = train(df_x_train, df_y_train, df_x_test, df_y_test)
+params, b, errors, test_errors, validation_errors = train(df_x_train, df_y_train, df_x_validation, df_y_validation, df_x_test, df_y_test)
 
 plt.figure(figsize=(10, 6))
 
 plt.plot(errors, label="Train Loss")
+plt.plot(validation_errors, label="Validation Loss")
 plt.plot(test_errors, label="Test Loss")
 
 plt.yscale("log")
@@ -451,137 +463,134 @@ plt.grid()
 plt.show()
 
 # %%
-df_x_train.columns
+plt.figure(figsize=(10, 6))
 
-# %%
-print(params, b)
-# display(df_x_test)
-# display(df_y_test)
+plt.plot(errors, label="Train Loss")
+plt.plot(validation_errors, label="Validation Loss")
+plt.plot(test_errors, label="Test Loss")
+
+plt.yscale("log")
+plt.ylim(1e-1, 1e5)
+
+plt.xlabel("Epoch")
+plt.ylabel("MSE")
+plt.title("Training vs Validation vsTest Loss")
+
+plt.legend()
+plt.grid()
+
+plt.show()
 
 # %%
 train_predictions = h(params, df_x_train, b)
+validation_predictions = h(params, df_x_validation, b)
 test_predictions = h(params, df_x_test, b)
 
-train_loss = calculate_loss(train_predictions - df_y_train)
-test_loss = calculate_loss(test_predictions - df_y_test)
+print("Train loss MSE:", calculate_loss(train_predictions - df_y_train))
+print("Validation loss MSE:", calculate_loss(validation_predictions - df_y_validation))
+print("Test loss MSE:", calculate_loss(test_predictions - df_y_test))
 
-print("Train loss:", train_loss)
-print("Test loss:", test_loss)
+# %%
+print(f"Tamaño validation x: {len(df_x_validation)}")
+print(f"Tamaño validation y: {len(df_y_validation)}")
+results = pd.DataFrame(data = np.dot(df_x_validation, params) + b, columns=["Resultado"])
+results["Esperado"] = df_y_validation.reset_index(drop=True)
+results["Error MSE"] = (results["Resultado"] - results["Esperado"]) ** 2
+
+
+print(f"Max error MSE: {results["Error MSE"].max()}")
+print(f"Mean error MSE: {results["Error MSE"].mean()}")
+print(f"Mediana error MSE: {results["Error MSE"].median()}")
+print(f"Min error MSE: {results["Error MSE"].min()}")
 
 # %%
 print(f"Tamaño test x: {len(df_x_test)}")
 print(f"Tamaño test y: {len(df_y_test)}")
 results = pd.DataFrame(data = np.dot(df_x_test, params) + b, columns=["Resultado"])
 results["Esperado"] = df_y_test.reset_index(drop=True)
-results["Error"] = (results["Resultado"] - results["Esperado"]) ** 2
-# display(results)
+results["Error MSE"] = (results["Resultado"] - results["Esperado"]) ** 2
 
-print(f"Max error: {results["Error"].max()}")
-print(f"Mean error: {results["Error"].mean()}")
-print(f"Mediana error: {results["Error"].median()}")
-print(f"Min error: {results["Error"].min()}")
 
-sns.scatterplot(data=results, x="Esperado", y="Error")
+print(f"Max error MSE: {results["Error MSE"].max()}")
+print(f"Mean error MSE: {results["Error MSE"].mean()}")
+print(f"Mediana error MSE: {results["Error MSE"].median()}")
+print(f"Min error MSE: {results["Error MSE"].min()}")
 
-def capturar_datos_juego():
-    print("=== CAPTURA DE DATOS DEL JUEGO DE STEAM ===")
+# %%
+plt.figure(figsize=(9, 6))
 
-    price_eur = float(input("Precio en EUR (ej. 19.99): "))
-    # review_score = float(
-    #     input("Review score o Calificación (ej. 8 o 8.5): ")
-    # )
-    positive = int(input("Cantidad de reseñas positivas (ej. 15000): "))
-    negative = int(input("Cantidad de reseñas negativas (ej. 1200): "))
-    total = int(
-        input("Cantidad total de reseñas (ej. 16200): ")
-        if positive is None
-        else positive + negative
-    )
-    concurrent_users = int(
-        input("Usuarios concurrentes ayer (ej. 4500): ")
-    )
+# Dibujar el Scatter Plot de los datos reales vs predichos
+plt.scatter(
+    results["Esperado"],
+    results["Resultado"],
+    color="#2b5c8f",
+    alpha=0.5,
+    edgecolors="none",
+    label="Puntos de Test",
+)
 
-    rangos_owners = [
-        "0 .. 20,000",
-        "20,000 .. 50,000",
-        "50,000 .. 100,000",
-        "100,000 .. 200,000",
-        "200,000 .. 500,000",
-        "500,000 .. 1,000,000",
-        "1,000,000 .. 2,000,000",
-        "2,000,000 .. 5,000,000",
-        "5,000,000 .. 10,000,000",
-        "10,000,000 .. 20,000,000",
-        "20,000,000 .. 50,000,000",
-        "50,000,000 .. 100,000,000",
-    ]
-    grade = [
-        "Overwhelmingly Positive",
-        "Very Positive",
-        "Mostly Positive",
-        "Positive",
-        "Mixed",
-        "Negative",
-        "Mostly Negative",	
-        "Very Negative"
-        "Overwhelmingly Negative",
-        "No user reviews",
-    ]
+# Dibujar la línea ideal de predicción perfecta (y = x)
+lim_min = min(results["Esperado"].min(), results["Resultado"].min()) - 1
+lim_max = max(results["Esperado"].max(), results["Resultado"].max()) + 1
+plt.plot(
+    [-1, 11],
+    [lim_min, lim_max],
+    color="red",
+    linestyle="--",
+    linewidth=2,
+    label="Predicción Perfecta ($y = x$)",
+)
 
-    print("\n--- Selecciona el rango de propietarios (Owners Range) ---")
-    for i, rango in enumerate(rangos_owners, 1):
-        print(f"[{i}] {rango}")
+# Formato de la gráfica
+plt.title(
+    "Diagnóstico del Modelo: Valores Reales vs. Predicciones", fontsize=13
+)
+plt.xlabel("Valor Real (Esperado)", fontsize=11)
+plt.ylabel("Valor Predicho ($\hat{y}$)", fontsize=11)
+plt.legend(loc="upper left")
+plt.grid(True, linestyle=":", alpha=0.6)
+plt.tight_layout()
 
-    # Validación de selección única
-    while True:
-        try:
-            opcion = int(
-                input(f"Elige una opción (1-{len(rangos_owners)}): ")
-            )
-            if 1 <= opcion <= len(rangos_owners):
-                owners_range_selected = rangos_owners[opcion - 1]
-                break
-            else:
-                print("Opción fuera de rango. Intenta de nuevo.")
-        except ValueError:
-            print("Por favor, ingresa solo un número entero.")
-            
-    print("\n--- Selecciona la calificación de acuerdo a reseñas ---")
-    for i, rango in enumerate(grade, 1):
-        print(f"[{i}] {rango}")
+plt.show()
 
-    # Validación de selección única
-    while True:
-        try:
-            opcion = int(
-                input(f"Elige una opción (1-{len(grade)}): ")
-            )
-            if 1 <= opcion <= len(grade):
-                grade_selection = grade[opcion - 1]
-                break
-            else:
-                print("Opción fuera de rango. Intenta de nuevo.")
-        except ValueError:
-            print("Por favor, ingresa solo un número entero.")
+# %%
+import os
+import json
 
-    # Guardar en un diccionario / DataFrame
-    datos_capturados = {
-        "price_eur": price_eur,
-        # "review_score": review_score,
-        "positive": positive,
-        "negative": negative,
-        "total": total,
-        "concurrent_users_yesterday": concurrent_users,
-        "owners_range": owners_range_selected,
-        "grade": grade_selection,
-    }
+with open("params_2.json", "w") as f:
+  json.dump(params.tolist(), f)
 
-    print("\n¡Datos capturados exitosamente!")
-    return pd.DataFrame([datos_capturados])
+# %%
+import json
 
 with open("params-original.json", 'r') as file:
-  params = json.load(file)
-  entradas = capturar_datos_juego()
-  prediction = h(params["params"], entradas[:-1], params["b"])
+  data = json.load(file)
+  b = data["b"]
+  params = data["params"]
   
-  print("Valor predecido: ", prediction)
+  print(f"Tamaño test x: {len(df_x_test)}")
+  print(f"Tamaño test y: {len(df_y_test)}")
+  results = pd.DataFrame(data = np.dot(df_x_test, params) + b, columns=["Resultado"])
+  results["Esperado"] = df_y_test.reset_index(drop=True)
+  results["Error MSE"] = (results["Resultado"] - results["Esperado"]) ** 2
+  
+  
+  diferencia = results["Resultado"] - results["Esperado"]
+  
+  n = len(diferencia)
+
+  sd = np.sqrt(np.sum((diferencia - diferencia.mean()) ** 2) / (n - 1))
+
+  se = sd / np.sqrt(n)
+
+  t = diferencia.mean() / se
+
+  print(f"Max error MSE: {results["Error MSE"].max()}")
+  print(f"Mean error MSE: {results["Error MSE"].mean()}")
+  print(f"Mediana error MSE: {results["Error MSE"].median()}")
+  print(f"Min error MSE: {results["Error MSE"].min()}")
+  
+  print(f"\nDesviación estandar: {sd}")
+  print(f"T-Student: {t}")
+
+

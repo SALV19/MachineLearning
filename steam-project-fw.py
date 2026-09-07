@@ -191,8 +191,8 @@ df_x_train
 df_x_test_standar = (df_x_test.iloc[:, :5] - mean) / std
 df_x_test = pd.concat([df_x_test_standar, df_x_test.iloc[:, 5:]], axis=1)
 
-display(df_x_train)
-display(df_y_train)
+
+
 
 # %%
 from sklearn.metrics import accuracy_score
@@ -225,7 +225,7 @@ results_rf = pd.DataFrame(
     }
 )
 
-display(results_rf)
+
 
 # %%
 def capturar_datos_juego():
