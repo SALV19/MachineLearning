@@ -178,15 +178,22 @@ df_x = games_final.reindex(columns=cols_x_ordenadas)
 df_y = games_final.reindex(columns=cols_y_ordenadas)
 
 train_length = round(len(df_x) * .8)
+val_length = round(len(df_x) * .1)
 df_x_train = df_x[:train_length]
-df_x_test = df_x[train_length:]
+df_x_val = df_x[train_length:train_length + val_length]
+df_x_test =df_x[train_length + val_length:]
+
 
 df_y_train = df_y[:train_length]
-df_y_test = df_y[train_length:]
+df_y_val = df_y[train_length:train_length + val_length]
+df_y_test =df_y[train_length + val_length:]
 
 df_x_standar, mean, std = standardize_data(df_x_train.iloc[:, :5])
 df_x_train = pd.concat([df_x_standar.iloc[:, :], df_x_train.iloc[:, 5:]], axis=1)
 df_x_train
+
+df_x_val_standar = (df_x_val.iloc[:, :5] - mean) / std
+df_x_val = pd.concat([df_x_val_standar, df_x_val.iloc[:, 5:]], axis=1)
 
 df_x_test_standar = (df_x_test.iloc[:, :5] - mean) / std
 df_x_test = pd.concat([df_x_test_standar, df_x_test.iloc[:, 5:]], axis=1)
@@ -201,8 +208,10 @@ from sklearn.ensemble import RandomForestClassifier
 # %%
 rnd_clf = RandomForestClassifier(n_estimators=400, max_leaf_nodes=10, n_jobs=-1, random_state=42)
 rnd_clf.fit(df_x_train, df_y_train)
-y_pred_rf= rnd_clf.predict(df_x_test)
-print("Accuracy", accuracy_score(df_y_test, y_pred_rf))
+y_pred_rf_val = rnd_clf.predict(df_x_val)
+y_pred_rf_test = rnd_clf.predict(df_x_test)
+print("Accuracy val", accuracy_score(df_y_val, y_pred_rf_val))
+print("Accuracy train", accuracy_score(df_y_test, y_pred_rf_test))
 rnd_clf
 
 # %%

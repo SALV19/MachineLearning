@@ -491,13 +491,26 @@ print("Validation loss MSE:", calculate_loss(validation_predictions - df_y_valid
 print("Test loss MSE:", calculate_loss(test_predictions - df_y_test))
 
 # %%
+print(f"Tamaño train x: {len(df_x_train)}")
+print(f"Tamaño train y: {len(df_y_train)}")
+results = pd.DataFrame(data = np.dot(df_x_train, params) + b, columns=["Resultado"])
+results["Esperado"] = df_y_train.reset_index(drop=True)
+results["Error MSE"] = (results["Resultado"] - results["Esperado"]) ** 2
+
+print("TRAINING")
+print(f"Max error MSE: {results["Error MSE"].max()}")
+print(f"Mean error MSE: {results["Error MSE"].mean()}")
+print(f"Mediana error MSE: {results["Error MSE"].median()}")
+print(f"Min error MSE: {results["Error MSE"].min()}")
+
+# %%
 print(f"Tamaño validation x: {len(df_x_validation)}")
 print(f"Tamaño validation y: {len(df_y_validation)}")
 results = pd.DataFrame(data = np.dot(df_x_validation, params) + b, columns=["Resultado"])
 results["Esperado"] = df_y_validation.reset_index(drop=True)
 results["Error MSE"] = (results["Resultado"] - results["Esperado"]) ** 2
 
-
+print("VALIDATION")
 print(f"Max error MSE: {results["Error MSE"].max()}")
 print(f"Mean error MSE: {results["Error MSE"].mean()}")
 print(f"Mediana error MSE: {results["Error MSE"].median()}")
@@ -510,7 +523,7 @@ results = pd.DataFrame(data = np.dot(df_x_test, params) + b, columns=["Resultado
 results["Esperado"] = df_y_test.reset_index(drop=True)
 results["Error MSE"] = (results["Resultado"] - results["Esperado"]) ** 2
 
-
+print("TEST")
 print(f"Max error MSE: {results["Error MSE"].max()}")
 print(f"Mean error MSE: {results["Error MSE"].mean()}")
 print(f"Mediana error MSE: {results["Error MSE"].median()}")

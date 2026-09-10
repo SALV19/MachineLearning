@@ -200,16 +200,22 @@ games_final = games_final.sample(frac=1)
 df_x = games_final.iloc[:, [0, *range(2, len(games_final.columns))]]
 df_y = games_final.iloc[:, 1]
 
-train_length = round(len(df_x) * .8)
+train_length = round(len(df_x) * .6)
+validation_length = round(train_length / 2) + train_length
 df_x_train = df_x[:train_length]
-df_x_test = df_x[train_length:]
+df_x_validation = df_x[train_length:validation_length]
+df_x_test = df_x[validation_length:]
+
 
 df_y_train = df_y[:train_length]
-df_y_test = df_y[train_length:]
+df_y_validation = df_y[train_length:validation_length]
+df_y_test = df_y[validation_length:]
 
 df_x_standar, mean, std = standardize_data(df_x_train.iloc[:, :5])
 df_x_train = pd.concat([df_x_standar.iloc[:, :], df_x_train.iloc[:, 5:]], axis=1)
-df_x_train
+
+df_x_validation_standar = (df_x_validation.iloc[:, :5] - mean) / std
+df_x_validation = pd.concat([df_x_validation_standar, df_x_validation.iloc[:, 5:]], axis=1)
 
 df_x_test_standar = (df_x_test.iloc[:, :5] - mean) / std
 df_x_test = pd.concat([df_x_test_standar, df_x_test.iloc[:, 5:]], axis=1)
@@ -341,7 +347,7 @@ def GD(params, alfa, b, x_values, y, change, momentum = 0.9):
 	return new_params, b, change, mean_error
 
 # %%
-def train(df_x, df_y, df_x_test, df_y_test):
+def train(df_x, df_y, df_x_validation, df_y_validation, df_x_test, df_y_test):
 	"""
 		Entrenamiento del modelo
 		Selecciona instancia
@@ -358,6 +364,7 @@ def train(df_x, df_y, df_x_test, df_y_test):
 	momentum = 0.9
 	
 	errors = []
+	validation_errors = []
 	test_errors = []
 	
 	while True:
@@ -368,6 +375,9 @@ def train(df_x, df_y, df_x_test, df_y_test):
 		errors.append(mean_error)
 
 		# plt.plot(errors)
+		validation_predictions = h(params, df_x_validation, b)
+		validation_loss = huber_loss(validation_predictions, df_y_validation)
+		validation_errors.append(validation_loss)
 		test_predictions = h(params, df_x_test, b)
 		# test_loss = calculate_loss(test_predictions - df_y_test)
 		test_loss = huber_loss(test_predictions, df_y_test)
@@ -391,14 +401,15 @@ def train(df_x, df_y, df_x_test, df_y_test):
 			print ("final params:")
 			print (params)
 			break
-	return params, b, errors, test_errors
+	return params, b, errors, test_errors, validation_errors
 
 # %%
-params, b, errors, test_errors = train(df_x_train, df_y_train, df_x_test, df_y_test)
+params, b, errors, test_errors, validation_errors = train(df_x_train, df_y_train, df_x_validation, df_y_validation, df_x_test, df_y_test)
 
 plt.figure(figsize=(10, 6))
 
 plt.plot(errors, label="Train Loss")
+plt.plot(validation_errors, label="Validation Loss")
 plt.plot(test_errors, label="Test Loss")
 
 plt.yscale("log")
@@ -437,13 +448,38 @@ df_x_train.columns
 print(params, b)
 
 train_predictions = h(params, df_x_train, b)
+validation_predictions = h(params, df_x_validation, b)
 test_predictions = h(params, df_x_test, b)
 
 print("Train loss MSE:", calculate_loss(train_predictions - df_y_train))
+print("Validation loss MSE:", calculate_loss(validation_predictions - df_y_validation))
 print("Test loss MSE:", calculate_loss(test_predictions - df_y_test))
 print("\nTrain loss Huber:", huber_loss(train_predictions, df_y_train))
 print("Test loss Huber:", huber_loss(test_predictions, df_y_test))
 
+print(f"Tamaño train x: {len(df_x_train)}")
+print(f"Tamaño train y: {len(df_y_train)}")
+results = pd.DataFrame(data = np.dot(df_x_train, params) + b, columns=["Resultado"])
+results["Esperado"] = df_y_train.reset_index(drop=True)
+results["Error MSE"] = (results["Resultado"] - results["Esperado"]) ** 2
+
+print("TRAINING")
+print(f"Max error MSE: {results["Error MSE"].max()}")
+print(f"Mean error MSE: {results["Error MSE"].mean()}")
+print(f"Mediana error MSE: {results["Error MSE"].median()}")
+print(f"Min error MSE: {results["Error MSE"].min()}")
+
+print(f"Tamaño validation x: {len(df_x_validation)}")
+print(f"Tamaño validation y: {len(df_y_validation)}")
+results = pd.DataFrame(data = np.dot(df_x_validation, params) + b, columns=["Resultado"])
+results["Esperado"] = df_y_validation.reset_index(drop=True)
+results["Error MSE"] = (results["Resultado"] - results["Esperado"]) ** 2
+
+print("VALIDATION")
+print(f"Max error MSE: {results["Error MSE"].max()}")
+print(f"Mean error MSE: {results["Error MSE"].mean()}")
+print(f"Mediana error MSE: {results["Error MSE"].median()}")
+print(f"Min error MSE: {results["Error MSE"].min()}")
 # %%
 print(f"Tamaño test x: {len(df_x_test)}")
 print(f"Tamaño test y: {len(df_y_test)}")
@@ -468,10 +504,6 @@ sd = np.sqrt(np.sum((diferencia - diferencia.mean()) ** 2) / (n - 1))
 se = sd / np.sqrt(n)
 t = diferencia.mean() / se
 
-print(f"Max error MSE: {results["Error MSE"].max()}")
-print(f"Mean error MSE: {results["Error MSE"].mean()}")
-print(f"Mediana error MSE: {results["Error MSE"].median()}")
-print(f"Min error MSE: {results["Error MSE"].min()}")
 print(f"\nMax error Huber: {results["Error huber"].max()}")
 print(f"Mean error Huber: {results["Error huber"].mean()}")
 print(f"Mediana error Huber: {results["Error huber"].median()}")
